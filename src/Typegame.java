@@ -5,6 +5,8 @@ import java.awt.event.*;
 import java.time.*;
 import java.util.*;
 import java.util.List;
+import java.time.LocalDateTime;
+import javax.swing.JOptionPane;
 
 public class Typegame extends JFrame {
     // UI Components
@@ -30,21 +32,7 @@ public class Typegame extends JFrame {
     private Color bgColor, textColor, primaryColor, accentColor, correctColor, errorColor;
     private Color buttonPressedColor = new Color(180, 180, 180);
     
-    // Difficulty levels
-    enum Difficulty {
-        EASY(15, "Easy", 1.0f), 
-        MEDIUM(25, "Medium", 1.2f), 
-        HARD(40, "Hard", 1.5f);
-        
-        final int length;
-        final String name;
-        final float multiplier;
-        Difficulty(int length, String name, float multiplier) {
-            this.length = length;
-            this.name = name;
-            this.multiplier = multiplier;
-        }
-    }
+   
     
     // Word bank
     private static final List<String> WORDS = List.of(
@@ -444,12 +432,18 @@ public class Typegame extends JFrame {
         highScores.update(diff, finalWpm);
         highScoreLabel.setText(highScores.toString());
         
+        // Prompt for username and save to database
+        String username = JOptionPane.showInputDialog(this, 
+            "Enter your name to save your score:", 
+            "Save Score", 
+            JOptionPane.PLAIN_MESSAGE);
+        
+        if (username != null && !username.trim().isEmpty()) {
+            DatabaseManager.saveScore(username.trim(), finalWpm, finalAccuracy, diff);
+        }
+        
         // Show results with performance comment
-        String performanceComment;
-        if (finalWpm >= 80) performanceComment = "Expert Typist! 🚀";
-        else if (finalWpm >= 50) performanceComment = "Great Job! 👍";
-        else if (finalWpm >= 30) performanceComment = "Good Start! 🙂";
-        else performanceComment = "Keep Practicing! 💪";
+        String performanceComment = getPerformanceComment(finalWpm);
         
         JOptionPane.showMessageDialog(this,
             "<html><div style='font-size:14pt;text-align:center;width:300px'>" +
@@ -464,6 +458,13 @@ public class Typegame extends JFrame {
             JOptionPane.INFORMATION_MESSAGE);
     }
 
+    private String getPerformanceComment(int wpm) {
+        if (wpm >= 80) return "Expert Typist! 🚀";
+        if (wpm >= 50) return "Great Job! 👍";
+        if (wpm >= 30) return "Good Start! 🙂";
+        return "Keep Practicing! 💪";
+    }
+
     private void restartGame() {
         gameRunning = false;
         try { Thread.sleep(100); } catch (InterruptedException e) {}
@@ -475,7 +476,9 @@ public class Typegame extends JFrame {
         
         HighScoreManager() {
             for (Difficulty d : Difficulty.values()) {
-                scores.put(d, 0);
+                // Load top score for each difficulty from database
+                List<DatabaseManager.ScoreRecord> records = DatabaseManager.getHighScores(d, 1);
+                scores.put(d, records.isEmpty() ? 0 : records.get(0).wpm);
             }
         }
         
