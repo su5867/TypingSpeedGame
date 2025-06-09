@@ -18,7 +18,8 @@ This is a simple **Java-based Typing Speed Game** developed using **Eclipse IDE*
 
 ## 📷 Screenshot
 
-![Screenshot 2025-06-09 030301](https://github.com/user-attachments/assets/2701babc-ed05-4952-8fa1-5f441c356692)
+![Screenshot 2025-06-09 100539](https://github.com/user-attachments/assets/64f4e562-2286-4f68-8cc0-722b0ff740f7)
+
 
 
 ## 💻 How to Run
