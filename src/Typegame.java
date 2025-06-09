@@ -32,7 +32,22 @@ public class Typegame extends JFrame {
     private Color bgColor, textColor, primaryColor, accentColor, correctColor, errorColor;
     private Color buttonPressedColor = new Color(180, 180, 180);
     
-   
+    // Difficulty enum
+    private enum Difficulty {
+        EASY("Easy", 30, 1.0),
+        MEDIUM("Medium", 50, 1.2),
+        HARD("Hard", 80, 1.5);
+        
+        final String name;
+        final int length;
+        final double multiplier;
+        
+        Difficulty(String name, int length, double multiplier) {
+            this.name = name;
+            this.length = length;
+            this.multiplier = multiplier;
+        }
+    }
     
     // Word bank
     private static final List<String> WORDS = List.of(
@@ -71,6 +86,28 @@ public class Typegame extends JFrame {
         difficultyCombo = new JComboBox<>();
         wpmProgressBar = new JProgressBar(0, 150);
         accuracyProgressBar = new JProgressBar(0, 100);
+        
+        // Add key listener for Enter key
+        inputArea.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER && gameRunning) {
+                    checkForCompletion();
+                    e.consume(); // Prevent newline from being added
+                }
+            }
+        });
+    }
+
+    private void checkForCompletion() {
+        String typedText = inputArea.getText().replace("\n", ""); // Remove any newlines
+        String promptText = currentPrompt.replace("\n", "").replace("\r", "");
+        
+        if (typedText.equals(promptText)) {
+            // User has completed the text
+            gameRunning = false;
+            endGame();
+        }
     }
 
     private void setTheme(boolean dark) {
@@ -118,11 +155,11 @@ public class Typegame extends JFrame {
         styleProgressBar(wpmProgressBar, primaryColor);
         styleProgressBar(accuracyProgressBar, accentColor);
         
-        // Buttons
-        styleButton(startButton, primaryColor);
-        styleButton(restartButton, accentColor);
-        styleButton(exitButton, new Color(220, 53, 69));
-        styleButton(themeButton, darkMode ? new Color(80, 80, 80) : new Color(200, 200, 200));
+        // Buttons - updated with more vibrant colors
+        styleButton(startButton, new Color(76, 175, 80)); // Green
+        styleButton(restartButton, new Color(33, 150, 243)); // Blue
+        styleButton(exitButton, new Color(244, 67, 54)); // Red
+        styleButton(themeButton, darkMode ? new Color(66, 66, 66) : new Color(189, 189, 189));
     }
 
     private void styleProgressBar(JProgressBar bar, Color color) {
@@ -143,11 +180,26 @@ public class Typegame extends JFrame {
             BorderFactory.createEmptyBorder(12, 25, 12, 25)
         ));
         
-        // Click effect only (no hover)
+        // Hover effect
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(bg.brighter());
+            }
+            
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(bg);
+            }
+        });
+        
+        // Click effect
         button.getModel().addChangeListener(e -> {
             ButtonModel model = (ButtonModel) e.getSource();
             if (model.isPressed()) {
-                button.setBackground(buttonPressedColor);
+                button.setBackground(bg.darker());
+            } else if (model.isRollover()) {
+                button.setBackground(bg.brighter());
             } else {
                 button.setBackground(bg);
             }
@@ -355,7 +407,13 @@ public class Typegame extends JFrame {
             }
         }
         
-        currentPrompt = sb.toString().replace("<br>", " ").replace("</html>", "").replace("<html>", "").replace("<div style='text-align:center'>", "");
+        // Store clean version without HTML tags for comparison
+        currentPrompt = sb.toString()
+            .replace("<br>", " ")
+            .replaceAll("<[^>]+>", "") // Remove all HTML tags
+            .trim();
+        
+        // Set the formatted version for display
         promptLabel.setText(sb.append("</div></html>").toString());
         inputArea.setText("");
     }
@@ -423,9 +481,13 @@ public class Typegame extends JFrame {
     private void endGame() {
         inputArea.setEnabled(false);
         
-        double minutes = Duration.between(gameStartTime, Instant.now()).toMillis() / 60000.0;
+        // Calculate time taken (either full 60s or actual time if completed early)
+        long secondsTaken = Duration.between(gameStartTime, Instant.now()).getSeconds();
+        boolean completedEarly = secondsTaken < 60;
+        
+        double minutes = secondsTaken / 60.0;
         Difficulty diff = Difficulty.values()[difficultyCombo.getSelectedIndex()];
-        int finalWpm = (int)((correctChars / 5.0 * diff.multiplier) / minutes);
+        int finalWpm = (int)((correctChars / 5.0 * diff.multiplier) / (minutes > 0 ? minutes : 1));
         double finalAccuracy = totalChars > 0 ? (correctChars * 100.0 / totalChars) : 0;
         
         // Save high score
@@ -439,16 +501,20 @@ public class Typegame extends JFrame {
             JOptionPane.PLAIN_MESSAGE);
         
         if (username != null && !username.trim().isEmpty()) {
-            DatabaseManager.saveScore(username.trim(), finalWpm, finalAccuracy, diff);
+            // DatabaseManager.saveScore(username.trim(), finalWpm, finalAccuracy, diff);
         }
         
         // Show results with performance comment
         String performanceComment = getPerformanceComment(finalWpm);
+        String timeInfo = completedEarly ? 
+            String.format("Completed in %d seconds!", secondsTaken) : 
+            "Time's up!";
         
         JOptionPane.showMessageDialog(this,
             "<html><div style='font-size:14pt;text-align:center;width:300px'>" +
             "<h2 style='color:" + primaryColor.getRGB() + "'>Test Complete!</h2>" +
-            "<p style='margin-top:15px'>" +
+            "<p style='margin-top:10px;color:" + accentColor.getRGB() + "'>" + timeInfo + "</p>" +
+            "<p style='margin-top:10px'>" +
             "Final WPM: <b style='color:" + primaryColor.getRGB() + "'>" + finalWpm + "</b><br>" +
             "Accuracy: <b style='color:" + primaryColor.getRGB() + "'>" + String.format("%.1f%%", finalAccuracy) + "</b>" +
             "</p><p style='margin-top:15px;font-size:16pt;color:" + accentColor.getRGB() + "'>" +
@@ -476,9 +542,7 @@ public class Typegame extends JFrame {
         
         HighScoreManager() {
             for (Difficulty d : Difficulty.values()) {
-                // Load top score for each difficulty from database
-                List<DatabaseManager.ScoreRecord> records = DatabaseManager.getHighScores(d, 1);
-                scores.put(d, records.isEmpty() ? 0 : records.get(0).wpm);
+                scores.put(d, 0);
             }
         }
         
