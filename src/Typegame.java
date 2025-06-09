@@ -1,7 +1,5 @@
-
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
+import javax.swing.event.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.time.*;
@@ -15,7 +13,7 @@ public class Typegame extends JFrame {
     private JButton startButton, restartButton, exitButton, themeButton;
     private JComboBox<String> difficultyCombo;
     private JPanel statsPanel, controlPanel;
-    private JScrollPane promptScroll, historyScroll;
+    private JScrollPane promptScroll;
     private JProgressBar wpmProgressBar, accuracyProgressBar;
     
     // Game state
@@ -30,6 +28,7 @@ public class Typegame extends JFrame {
     
     // Colors
     private Color bgColor, textColor, primaryColor, accentColor, correctColor, errorColor;
+    private Color buttonPressedColor = new Color(180, 180, 180);
     
     // Difficulty levels
     enum Difficulty {
@@ -59,24 +58,28 @@ public class Typegame extends JFrame {
         initializeComponents();
         setTheme(false); // Start with light theme
         setupUI();
-        setSize(1000, 700);
+        setTitle("Typing Speed Master");
+        setSize(1100, 750);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setVisible(true);
     }
 
     private void initializeComponents() {
-        promptLabel = new JLabel();
+        promptLabel = new JLabel("", SwingConstants.CENTER);
         inputArea = new JTextArea();
-        timerLabel = new JLabel();
-        wpmLabel = new JLabel();
-        accuracyLabel = new JLabel();
-        highScoreLabel = new JLabel();
-        feedbackLabel = new JLabel();
-        startButton = new JButton("Start");
-        restartButton = new JButton("Restart");
-        exitButton = new JButton("Exit");
-        themeButton = new JButton("🌙 Dark");
+        timerLabel = new JLabel("60 seconds", SwingConstants.CENTER);
+        wpmLabel = new JLabel("0 WPM", SwingConstants.CENTER);
+        accuracyLabel = new JLabel("0%", SwingConstants.CENTER);
+        highScoreLabel = new JLabel("", SwingConstants.CENTER);
+        feedbackLabel = new JLabel("Press Start to begin", SwingConstants.CENTER);
+        
+        // Buttons with text only
+        startButton = new JButton("START");
+        restartButton = new JButton("RESTART");
+        exitButton = new JButton("EXIT");
+        themeButton = new JButton("DARK MODE");
+        
         difficultyCombo = new JComboBox<>();
         wpmProgressBar = new JProgressBar(0, 150);
         accuracyProgressBar = new JProgressBar(0, 100);
@@ -85,21 +88,23 @@ public class Typegame extends JFrame {
     private void setTheme(boolean dark) {
         darkMode = dark;
         if (darkMode) {
-            bgColor = new Color(40, 44, 52);
-            textColor = Color.WHITE;
-            primaryColor = new Color(100, 149, 237);
-            accentColor = new Color(255, 165, 0);
-            correctColor = new Color(144, 238, 144);
-            errorColor = new Color(255, 102, 102);
-            themeButton.setText("☀️ Light");
+            // Dark theme colors
+            bgColor = new Color(36, 36, 36);
+            textColor = new Color(240, 240, 240);
+            primaryColor = new Color(70, 130, 180);   // Steel Blue
+            accentColor = new Color(255, 165, 0);     // Orange
+            correctColor = new Color(50, 205, 50);    // Lime Green
+            errorColor = new Color(255, 69, 0);       // Red-Orange
+            themeButton.setText("LIGHT MODE");
         } else {
-            bgColor = new Color(240, 240, 240);
-            textColor = Color.BLACK;
-            primaryColor = new Color(70, 130, 180);
-            accentColor = new Color(255, 140, 0);
-            correctColor = new Color(152, 251, 152);
-            errorColor = new Color(255, 160, 122);
-            themeButton.setText("🌙 Dark");
+            // Light theme colors
+            bgColor = new Color(245, 245, 245);
+            textColor = new Color(40, 40, 40);
+            primaryColor = new Color(30, 144, 255);   // Dodger Blue
+            accentColor = new Color(255, 140, 0);     // Dark Orange
+            correctColor = new Color(34, 139, 34);    // Forest Green
+            errorColor = new Color(220, 20, 60);      // Crimson
+            themeButton.setText("DARK MODE");
         }
         applyTheme();
     }
@@ -109,9 +114,11 @@ public class Typegame extends JFrame {
         
         // Set component colors
         promptLabel.setForeground(textColor);
-        inputArea.setBackground(darkMode ? new Color(60, 64, 72) : Color.WHITE);
+        inputArea.setBackground(darkMode ? new Color(50, 50, 50) : Color.WHITE);
         inputArea.setForeground(textColor);
-        inputArea.setCaretColor(textColor);
+        inputArea.setCaretColor(accentColor);
+        inputArea.setSelectionColor(primaryColor);
+        inputArea.setSelectedTextColor(Color.WHITE);
         
         timerLabel.setForeground(textColor);
         wpmLabel.setForeground(textColor);
@@ -127,31 +134,44 @@ public class Typegame extends JFrame {
         styleButton(startButton, primaryColor);
         styleButton(restartButton, accentColor);
         styleButton(exitButton, new Color(220, 53, 69));
-        styleButton(themeButton, darkMode ? accentColor : primaryColor);
+        styleButton(themeButton, darkMode ? new Color(80, 80, 80) : new Color(200, 200, 200));
     }
 
     private void styleProgressBar(JProgressBar bar, Color color) {
         bar.setForeground(color);
-        bar.setBackground(bgColor);
-        bar.setBorder(BorderFactory.createLineBorder(color, 1));
+        bar.setBackground(darkMode ? new Color(70, 70, 70) : new Color(220, 220, 220));
+        bar.setBorder(BorderFactory.createLineBorder(color.darker(), 1));
         bar.setStringPainted(true);
+        bar.setFont(new Font("Segoe UI", Font.BOLD, 12));
     }
 
     private void styleButton(JButton button, Color bg) {
         button.setBackground(bg);
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
         button.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(bg.darker(), 2),
-            BorderFactory.createEmptyBorder(8, 16, 8, 16)
+            BorderFactory.createEmptyBorder(12, 25, 12, 25)
         ));
+        
+        // Click effect only (no hover)
+        button.getModel().addChangeListener(e -> {
+            ButtonModel model = (ButtonModel) e.getSource();
+            if (model.isPressed()) {
+                button.setBackground(buttonPressedColor);
+            } else {
+                button.setBackground(bg);
+            }
+        });
     }
 
     private void setupUI() {
         setLayout(new BorderLayout(15, 15));
+        getContentPane().setBackground(bgColor);
         
         // Control Panel (Top)
-        controlPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        controlPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
         controlPanel.setBackground(bgColor);
         
         difficultyCombo.setModel(new DefaultComboBoxModel<>(
@@ -160,6 +180,9 @@ public class Typegame extends JFrame {
                 .toArray(String[]::new)
         ));
         difficultyCombo.setSelectedIndex(1); // Default to Medium
+        difficultyCombo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        difficultyCombo.setBackground(darkMode ? new Color(70, 70, 70) : Color.WHITE);
+        difficultyCombo.setForeground(textColor);
         
         themeButton.addActionListener(e -> setTheme(!darkMode));
         
@@ -170,17 +193,25 @@ public class Typegame extends JFrame {
         add(controlPanel, BorderLayout.NORTH);
         
         // Prompt Area (Center Top)
-        promptLabel.setFont(new Font("Consolas", Font.BOLD, 20));
-        promptLabel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        promptLabel.setFont(new Font("Consolas", Font.BOLD, 22));
+        promptLabel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         promptScroll = new JScrollPane(promptLabel);
-        promptScroll.setBorder(BorderFactory.createTitledBorder("Type This Text"));
+        promptScroll.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(primaryColor, 2), 
+            "TYPE THIS TEXT",
+            javax.swing.border.TitledBorder.CENTER,
+            javax.swing.border.TitledBorder.DEFAULT_POSITION,
+            new Font("Segoe UI", Font.BOLD, 12),
+            primaryColor
+        ));
+        promptScroll.setBackground(bgColor);
         add(promptScroll, BorderLayout.CENTER);
         
         // Input Area (Center Bottom)
-        inputArea.setFont(new Font("Consolas", Font.PLAIN, 18));
+        inputArea.setFont(new Font("Consolas", Font.PLAIN, 20));
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
-        inputArea.setMargin(new Insets(15, 15, 15, 15));
+        inputArea.setMargin(new Insets(20, 20, 20, 20));
         inputArea.setEnabled(false);
         inputArea.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -190,7 +221,17 @@ public class Typegame extends JFrame {
             @Override
             public void changedUpdate(DocumentEvent e) {}
         });
-        add(new JScrollPane(inputArea), BorderLayout.SOUTH);
+        
+        JScrollPane inputScroll = new JScrollPane(inputArea);
+        inputScroll.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(accentColor, 2), 
+            "YOUR TYPING",
+            javax.swing.border.TitledBorder.CENTER,
+            javax.swing.border.TitledBorder.DEFAULT_POSITION,
+            new Font("Segoe UI", Font.BOLD, 12),
+            accentColor
+        ));
+        add(inputScroll, BorderLayout.SOUTH);
         
         // Stats Panel (Right)
         statsPanel = new JPanel();
@@ -199,66 +240,77 @@ public class Typegame extends JFrame {
         statsPanel.setBackground(bgColor);
         
         // Timer
-        timerLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        statsPanel.add(createStatPanel("⏱️ Time Remaining", timerLabel));
+        timerLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        statsPanel.add(createStatPanel("⏱ TIME REMAINING", timerLabel));
         
         // WPM with progress bar
-        wpmLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        wpmLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         wpmProgressBar.setString("WPM");
-        statsPanel.add(createStatPanel("🚀 Speed (WPM)", wpmLabel, wpmProgressBar));
+        statsPanel.add(createStatPanel("🚀 TYPING SPEED (WPM)", wpmLabel, wpmProgressBar));
         
         // Accuracy with progress bar
-        accuracyLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        accuracyProgressBar.setString("Accuracy");
-        statsPanel.add(createStatPanel("🎯 Accuracy", accuracyLabel, accuracyProgressBar));
+        accuracyLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        accuracyProgressBar.setString("ACCURACY");
+        statsPanel.add(createStatPanel("🎯 ACCURACY", accuracyLabel, accuracyProgressBar));
         
         // Feedback
-        feedbackLabel.setFont(new Font("Arial", Font.ITALIC, 14));
-        statsPanel.add(createStatPanel("💡 Feedback", feedbackLabel));
+        feedbackLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+        statsPanel.add(createStatPanel("💡 LIVE FEEDBACK", feedbackLabel));
         
         // High Scores
-        highScoreLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        statsPanel.add(createStatPanel("🏆 High Scores", highScoreLabel));
+        highScoreLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        statsPanel.add(createStatPanel("🏆 HIGH SCORES", highScoreLabel));
         
         add(statsPanel, BorderLayout.EAST);
         
         // Button Panel (Bottom)
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.X_AXIS));
         buttonPanel.setBackground(bgColor);
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+        
+        // Center buttons horizontally
+        JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 0));
+        centerPanel.setBackground(bgColor);
         
         startButton.addActionListener(e -> startGame());
         restartButton.addActionListener(e -> restartGame());
         exitButton.addActionListener(e -> System.exit(0));
         
-        buttonPanel.add(startButton);
-        buttonPanel.add(restartButton);
-        buttonPanel.add(exitButton);
+        centerPanel.add(startButton);
+        centerPanel.add(restartButton);
+        centerPanel.add(exitButton);
+        
+        buttonPanel.add(Box.createHorizontalGlue());
+        buttonPanel.add(centerPanel);
+        buttonPanel.add(Box.createHorizontalGlue());
+        
         add(buttonPanel, BorderLayout.SOUTH);
         
         // Initialize values
-        timerLabel.setText("60 seconds");
-        wpmLabel.setText("0 WPM");
-        accuracyLabel.setText("0%");
         highScoreLabel.setText(highScores.toString());
-        feedbackLabel.setText("Press Start to begin");
     }
 
     private JPanel createStatPanel(String title, JComponent... components) {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(bgColor);
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         titleLabel.setForeground(accentColor);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(titleLabel);
         
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        
         for (JComponent comp : components) {
+            comp.setAlignmentX(Component.CENTER_ALIGNMENT);
             panel.add(comp);
-            panel.add(Box.createRigidArea(new Dimension(0, 5)));
+            panel.add(Box.createRigidArea(new Dimension(0, 10)));
         }
         
-        panel.add(Box.createRigidArea(new Dimension(0, 15)));
         return panel;
     }
 
@@ -301,7 +353,7 @@ public class Typegame extends JFrame {
     private void generatePrompt() {
         Difficulty diff = Difficulty.values()[difficultyCombo.getSelectedIndex()];
         Random rand = new Random();
-        StringBuilder sb = new StringBuilder("<html>");
+        StringBuilder sb = new StringBuilder("<html><div style='text-align:center'>");
         
         // Generate wrapped HTML text for better display
         int lineLength = 0;
@@ -315,8 +367,8 @@ public class Typegame extends JFrame {
             }
         }
         
-        currentPrompt = sb.toString().replace("<br>", " ").replace("</html>", "").replace("<html>", "");
-        promptLabel.setText(sb.append("</html>").toString());
+        currentPrompt = sb.toString().replace("<br>", " ").replace("</html>", "").replace("<html>", "").replace("<div style='text-align:center'>", "");
+        promptLabel.setText(sb.append("</div></html>").toString());
         inputArea.setText("");
     }
 
@@ -325,7 +377,7 @@ public class Typegame extends JFrame {
         
         String typed = inputArea.getText();
         int correct = 0;
-        StringBuilder feedback = new StringBuilder("<html>");
+        StringBuilder feedback = new StringBuilder("<html><div style='text-align:center'>");
         
         for (int i = 0; i < typed.length(); i++) {
             char expected = i < currentPrompt.length() ? currentPrompt.charAt(i) : ' ';
@@ -333,15 +385,15 @@ public class Typegame extends JFrame {
             
             if (actual == expected) {
                 correct++;
-                feedback.append("<span style='color:green'>").append(actual).append("</span>");
+                feedback.append("<span style='color:").append(darkMode ? "#32CD32" : "#228B22").append("'>").append(actual).append("</span>");
             } else {
-                feedback.append("<span style='color:red'>").append(actual).append("</span>");
+                feedback.append("<span style='color:").append(darkMode ? "#FF4500" : "#DC143C").append("'>").append(actual).append("</span>");
             }
         }
         
         // Show remaining characters
         if (typed.length() < currentPrompt.length()) {
-            feedback.append("<span style='color:gray'>")
+            feedback.append("<span style='color:").append(darkMode ? "#757575" : "#ADB5BD").append("'>")
                   .append(currentPrompt.substring(typed.length()))
                   .append("</span>");
         }
@@ -349,7 +401,7 @@ public class Typegame extends JFrame {
         correctChars = correct;
         totalChars = typed.length();
         updateStats();
-        updateFeedback(feedback.append("</html>").toString());
+        updateFeedback(feedback.append("</div></html>").toString());
     }
 
     private void updateStats() {
@@ -365,8 +417,8 @@ public class Typegame extends JFrame {
         double accuracy = totalChars > 0 ? (correctChars * 100.0 / totalChars) : 0;
         
         // Update UI
-        wpmLabel.setText(adjustedWpm + " WPM");
-        accuracyLabel.setText(String.format("%.1f%%", accuracy));
+        wpmLabel.setText("<html><b>" + adjustedWpm + "</b> WPM</html>");
+        accuracyLabel.setText(String.format("<html><b>%.1f%%</b></html>", accuracy));
         wpmProgressBar.setValue(Math.min(adjustedWpm, 150));
         accuracyProgressBar.setValue((int)accuracy);
         
@@ -377,12 +429,7 @@ public class Typegame extends JFrame {
     }
 
     private void updateFeedback(String message) {
-        if (message.startsWith("<html>")) {
-            feedbackLabel.setText(message);
-        } else {
-            feedbackLabel.setText("<html><span style='color:" + 
-                (darkMode ? "white" : "black") + "'>" + message + "</span></html>");
-        }
+        feedbackLabel.setText(message);
     }
 
     private void endGame() {
@@ -405,12 +452,14 @@ public class Typegame extends JFrame {
         else performanceComment = "Keep Practicing! 💪";
         
         JOptionPane.showMessageDialog(this,
-            "<html><div style='font-size:14pt;text-align:center'>" +
-            "<b>Test Complete!</b><br><br>" +
-            "Final WPM: <font color='blue'>" + finalWpm + "</font><br>" +
-            "Accuracy: <font color='blue'>" + String.format("%.1f%%", finalAccuracy) + "</font><br><br>" +
+            "<html><div style='font-size:14pt;text-align:center;width:300px'>" +
+            "<h2 style='color:" + primaryColor.getRGB() + "'>Test Complete!</h2>" +
+            "<p style='margin-top:15px'>" +
+            "Final WPM: <b style='color:" + primaryColor.getRGB() + "'>" + finalWpm + "</b><br>" +
+            "Accuracy: <b style='color:" + primaryColor.getRGB() + "'>" + String.format("%.1f%%", finalAccuracy) + "</b>" +
+            "</p><p style='margin-top:15px;font-size:16pt;color:" + accentColor.getRGB() + "'>" +
             performanceComment +
-            "</div></html>",
+            "</p></div></html>",
             "Results",
             JOptionPane.INFORMATION_MESSAGE);
     }
@@ -438,11 +487,13 @@ public class Typegame extends JFrame {
         
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder("<html>");
+            StringBuilder sb = new StringBuilder("<html><div style='text-align:center'>");
             for (Difficulty d : Difficulty.values()) {
-                sb.append(d.name).append(": <b>").append(scores.get(d)).append(" WPM</b><br>");
+                sb.append("<b>").append(d.name).append(":</b> ")
+                 .append("<span style='color:").append(primaryColor.getRGB()).append("'>")
+                 .append(scores.get(d)).append(" WPM</span><br>");
             }
-            return sb.append("</html>").toString();
+            return sb.append("</div></html>").toString();
         }
     }
 
@@ -450,10 +501,10 @@ public class Typegame extends JFrame {
         SwingUtilities.invokeLater(() -> {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                new Typegame();
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            new Typegame();
         });
     }
 }
